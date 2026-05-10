@@ -1,79 +1,54 @@
-# OpenShift Console Plugin Template
+# networking-console-plugin
 
-This project is a minimal template for writing a new OpenShift Console dynamic
-plugin.
+## About
 
-[Dynamic plugins](https://github.com/openshift/console/tree/master/frontend/packages/console-dynamic-plugin-sdk)
-allow you to extend the
-[OpenShift UI](https://github.com/openshift/console)
-at runtime, adding custom pages and other extensions. They are based on
-[webpack module federation](https://webpack.js.org/concepts/module-federation/).
-Plugins are registered with console using the `ConsolePlugin` custom resource
-and enabled in the console operator config by a cluster administrator.
+OpenShift Console dynamic plugin for the **Networking** section. Provides list, detail, form, and YAML views for core Kubernetes and OpenShift networking resources: Services, Routes, Ingresses, NetworkPolicies, NetworkAttachmentDefinitions (NADs), and UserDefinedNetworks (UDNs/CUDNs).
 
-Using the latest `v1` API version of `ConsolePlugin` CRD, requires OpenShift 4.12
-and higher. For using old `v1alpha1` API version us OpenShift version 4.10 or 4.11.
+The plugin runs as a sidecar served by nginx and registered via the `ConsolePlugin` custom resource. It uses [webpack module federation](https://webpack.js.org/concepts/module-federation/) through the `@openshift-console/dynamic-plugin-sdk` to load into the running console at runtime.
 
-For an example of a plugin that works with OpenShift 4.11, see the `release-4.11` branch.
-For a plugin that works with OpenShift 4.10, see the `release-4.10` branch.
+## Prerequisites
 
-[Node.js](https://nodejs.org/en/) and [npm](https://www.npmjs.com/) are required
-to build and run the example. To run OpenShift console in a container, either
-[Docker](https://www.docker.com) or [podman 3.2.0+](https://podman.io) and
-[oc](https://console.redhat.com/openshift/downloads) are required.
+- [Node.js](https://nodejs.org/) (version compatible with the CI builder image)
+- [npm](https://www.npmjs.com/)
+- [oc](https://console.redhat.com/openshift/downloads) CLI authenticated to an OpenShift cluster
+- [Docker](https://www.docker.com) or [podman 3.2.0+](https://podman.io) (for running the console container)
 
-## Getting started
+## Quick Start
 
-After cloning this repo, you should update the plugin metadata such as the
-plugin name in the `consolePlugin` declaration of [package.json](package.json).
-
-```json
-"consolePlugin": {
-  "name": "networking-console-plugin",
-  "version": "0.0.1",
-  "displayName": "My Plugin",
-  "description": "Enjoy this shiny, new console plugin!",
-  "exposedModules": {
-    "ExamplePage": "./components/ExamplePage"
-  },
-  "dependencies": {
-    "@console/pluginAPI": "*"
-  }
-}
+```bash
+git clone https://github.com/openshift/networking-console-plugin.git
+cd networking-console-plugin
+npm ci
 ```
 
-The template adds a single example page in the Home navigation section. The
-extension is declared in the [console-extensions.json](console-extensions.json)
-file and the React component is declared in
-[src/components/ExamplePage.tsx](src/components/ExamplePage.tsx).
+In one terminal, start the plugin dev server:
 
-You can run the plugin using a local development environment or build an image
-to deploy it to a cluster.
+```bash
+npm run start
+```
 
-## Development
+In another terminal, log into your cluster and start the console:
 
-### Option 1: Local
+```bash
+oc login https://api.your-cluster.example.com:6443
+npm run start-console
+```
 
-In one terminal window, run:
+Navigate to `http://localhost:9000`. The plugin serves on port 9001 with CORS enabled.
 
-1. `npm install`
-2. `npm run start`
+### Running with Companion Plugins
 
-In another terminal window, run:
+The `start-console.sh` script accepts additional plugin names as arguments. It clones, installs, and starts each companion plugin on sequential ports (9002, 9003, ...) and registers them with the console container:
 
-1. `oc login` (requires [oc](https://console.redhat.com/openshift/downloads) and an [OpenShift cluster](https://console.redhat.com/openshift/create))
-2. `npm run start-console` (requires [Docker](https://www.docker.com) or [podman 3.2.0+](https://podman.io))
+```bash
+npm run start-console -- monitoring-plugin nmstate-console-plugin
+```
 
-This will run the OpenShift console in a container connected to the cluster
-you've logged into. The plugin HTTP server runs on port 9001 with CORS enabled.
-Navigate to <http://localhost:9000/example> to see the running plugin.
+Supported companion plugins: `monitoring-plugin`, `nmstate-console-plugin`, `kubevirt-plugin`.
 
-#### Running start-console with Apple silicon and podman
+### Apple Silicon + Podman
 
-If you are using podman on a Mac with Apple silicon, `npm run start-console`
-might fail since it runs an amd64 image. You can workaround the problem with
-[qemu-user-static](https://github.com/multiarch/qemu-user-static) by running
-these commands:
+If `npm run start-console` fails on a Mac with Apple silicon, install `qemu-user-static` in the podman VM:
 
 ```bash
 podman machine ssh
@@ -82,140 +57,93 @@ rpm-ostree install qemu-user-static
 systemctl reboot
 ```
 
-### Option 2: Docker + VSCode Remote Container
+### VS Code Remote Container
 
-Make sure the
-[Remote Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
-extension is installed. This method uses Docker Compose where one container is
-the OpenShift console and the second container is the plugin. It requires that
-you have access to an existing OpenShift cluster. After the initial build, the
-cached containers will help you start developing in seconds.
+1. Create `.devcontainer/dev.env` with cluster credentials (`OC_PLUGIN_NAME`, `OC_URL`, `OC_USER`, `OC_PASS`).
+2. Open the folder in a Remote Container (`Ctrl+Shift+P` > "Remote Containers: Open Folder in Container...").
+3. Run `npm run start` and navigate to `http://localhost:9000`.
 
-1. Create a `dev.env` file inside the `.devcontainer` folder with the correct values for your cluster:
+## Development
 
-```bash
-OC_PLUGIN_NAME=networking-console-plugin
-OC_URL=https://api.example.com:6443
-OC_USER=kubeadmin
-OC_PASS=<password>
-```
+### Scripts
 
-2. `(Ctrl+Shift+P) => Remote Containers: Open Folder in Container...`
-3. `npm run start`
-4. Navigate to <http://localhost:9000/example>
+| Command | Description |
+|---|---|
+| `npm run start` | Start webpack dev server on port 9001 |
+| `npm run start-console` | Start OpenShift Console container connected to the cluster |
+| `npm run build` | Production build to `dist/` |
+| `npm run build-dev` | Development build to `dist/` |
+| `npm run lint` | Run ESLint on `src/` and `integration-tests/` |
+| `npm run lint-fix` | Auto-fix ESLint issues |
+| `npm run i18n` | Extract and update i18n translation strings |
+| `npm run test-cypress` | Open Cypress test runner (interactive) |
+| `npm run test-cypress-headless` | Run Cypress tests headlessly |
 
-## Docker image
+### Path Aliases
 
-Before you can deploy your plugin on a cluster, you must build an image and
-push it to an image registry.
+The project uses TypeScript path aliases defined in `tsconfig.json`:
 
-1. Build the image:
+| Alias | Path |
+|---|---|
+| `@utils/*` | `src/utils/*` |
+| `@views/*` | `src/views/*` |
+| `@styles/*` | `src/styles/*` |
 
-   ```sh
-   docker build -t quay.io/my-repository/my-plugin:latest .
-   ```
+### Linting
 
-2. Run the image:
+ESLint enforces:
+- Alphabetical sorting of named exports and class members via `eslint-plugin-perfectionist`
+- Import grouping and ordering via `eslint-plugin-simple-import-sort` (React first, packages, internal `@` imports, relative imports, styles last)
+- No `console.log` (`no-console: error`)
+- No nested ternaries
+- No unused variables (except those prefixed with `_`)
+- Prettier formatting (single quotes, trailing commas, 100-char print width, 2-space indent)
 
-   ```sh
-   docker run -it --rm -d -p 9001:80 quay.io/my-repository/my-plugin:latest
-   ```
+Stylelint rules (when present) disallow hex colors (use PatternFly CSS variables) and naked element selectors or `.pf-`/`.co-` prefixed classes to prevent overwriting console styles.
 
-3. Push the image:
+### i18n
 
-   ```sh
-   docker push quay.io/my-repository/my-plugin:latest
-   ```
-
-NOTE: If you have a Mac with Apple silicon, you will need to add the flag
-`--platform=linux/amd64` when building the image to target the correct platform
-to run in-cluster.
-
-## Deployment on cluster
-
-A [Helm](https://helm.sh) chart is available to deploy the plugin to an OpenShift environment.
-
-The following Helm parameters are required:
-
-`plugin.image`: The location of the image containing the plugin that was previously pushed
-
-Additional parameters can be specified if desired. Consult the chart [values](charts/openshift-console-plugin/values.yaml) file for the full set of supported parameters.
-
-### Installing the Helm Chart
-
-Install the chart using the name of the plugin as the Helm release name into a new namespace or an existing namespace as specified by the `plugin_networking-console-plugin` parameter and providing the location of the image within the `plugin.image` parameter by using the following command:
-
-```shell
-helm upgrade -i  my-plugin charts/openshift-console-plugin -n plugin__networking-console-plugin --create-namespace --set plugin.image=my-plugin-image-location
-```
-
-NOTE: When deploying on OpenShift 4.10, it is recommended to add the parameter `--set plugin.securityContext.enabled=false` which will omit configurations related to Pod Security.
-
-NOTE: When defining i18n namespace, adhere `plugin__<name-of-the-plugin>` format. The name of the plugin should be extracted from the `consolePlugin` declaration within the [package.json](package.json) file.
-
-## i18n
-
-The plugin template demonstrates how you can translate messages in with [react-i18next](https://react.i18next.com/). The i18n namespace must match
-the name of the `ConsolePlugin` resource with the `plugin__` prefix to avoid
-naming conflicts. For example, the plugin template uses the
-`plugin__networking-console-plugin` namespace. You can use the `useTranslation` hook
-with this namespace as follows:
+All user-facing strings use the `plugin__networking-console-plugin` namespace. Two patterns are in use:
 
 ```tsx
-import React, { FC } from 'react';
-
-conster Header: FC = () => {
-  const { t } = useTranslation('plugin__networking-console-plugin');
-  return <h1>{t('Hello, World!')}</h1>;
-};
+// Hook-based (most components)
+const { t } = useNetworkingTranslation();
+return <span>{t('My label')}</span>;
 ```
 
-For labels in `console-extensions.json`, you can use the format
-`%plugin__networking-console-plugin~My Label%`. Console will replace the value with
-the message for the current language from the `plugin__networking-console-plugin`
-namespace. For example:
-
-```json
-  {
-    "type": "console.navigation/section",
-    "properties": {
-      "id": "admin-demo-section",
-      "perspective": "admin",
-      "name": "%plugin__networking-console-plugin~Plugin Template%"
-    }
-  }
+```tsx
+// Trans component (JSX interpolation in strings)
+import { Trans } from 'react-i18next';
+return <Trans t={t} ns="plugin__networking-console-plugin">See <a>docs</a></Trans>;
 ```
 
-Running `npm run i18n` updates the JSON files in the `locales` folder of the
-plugin template when adding or changing messages.
+Run `npm run i18n` to regenerate locale files in `locales/`. Supported locales: en, es, fr, ja, ko, zh.
 
-## Linting
+## Docker Image
 
-This project adds prettier, eslint, and stylelint. Linting can be run with
-`npm run lint`.
+```bash
+docker build -t quay.io/my-repository/networking-console-plugin:latest .
+docker push quay.io/my-repository/networking-console-plugin:latest
+```
 
-The stylelint config disallows hex colors since these cause problems with dark
-mode (starting in OpenShift console 4.11). You should use the
-[PatternFly global CSS variables](https://patternfly-react-main.surge.sh/developer-resources/global-css-variables#global-css-variables)
-for colors instead.
+On Apple silicon, add `--platform=linux/amd64`.
 
-The stylelint config also disallows naked element selectors like `table` and
-`.pf-` or `.co-` prefixed classes. This prevents plugins from accidentally
-overwriting default console styles, breaking the layout of existing pages. The
-best practice is to prefix your CSS classnames with your plugin name to avoid
-conflicts. Please don't disable these rules without understanding how they can
-break console styles!
+## Deployment
 
-## Reporting
+A [Helm](https://helm.sh) chart in `charts/openshift-console-plugin/` deploys the plugin to an OpenShift cluster:
 
-Steps to generate reports
+```bash
+helm upgrade -i networking-console-plugin charts/openshift-console-plugin \
+  -n plugin__networking-console-plugin --create-namespace \
+  --set plugin.image=quay.io/my-repository/networking-console-plugin:latest
+```
 
-1. In command prompt, navigate to root folder and execute the command `npm run cypress-merge`
-2. Then execute command `npm run cypress-generate`
-The cypress-report.html file is generated and should be in (/integration-tests/screenshots) directory
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for coding standards, PR process, and review guidelines.
 
 ## References
 
-- [Console Plugin SDK README](https://github.com/openshift/console/tree/master/frontend/packages/console-dynamic-plugin-sdk)
-- [Customization Plugin Example](https://github.com/spadgett/console-customization-plugin)
+- [Console Plugin SDK](https://github.com/openshift/console/tree/master/frontend/packages/console-dynamic-plugin-sdk)
 - [Dynamic Plugin Enhancement Proposal](https://github.com/openshift/enhancements/blob/master/enhancements/console/dynamic-plugins.md)
+- [PatternFly](https://www.patternfly.org/)

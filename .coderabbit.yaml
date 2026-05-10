@@ -1,0 +1,46 @@
+language: en-US
+reviews:
+  profile: concise
+  auto_review:
+    enabled: true
+    drafts: false
+  path_filters:
+    - "!package-lock.json"
+    - "!locales/**"
+    - "!dist/**"
+    - "!node_modules/**"
+    - "!charts/**/*.yaml"
+    - "!integration-tests/screenshots/**"
+  path_instructions:
+    - path: "src/views/*/manifest.ts"
+      instructions: |
+        Verify extension type declarations match the Console SDK types.
+        Check that exposed module paths point to existing files.
+        Ensure model definitions use correct apiGroup, apiVersion, and kind values.
+    - path: "src/utils/models/**"
+      instructions: |
+        Verify K8sModel definitions include labelKey and labelPluralKey with
+        i18n extraction comments (e.g., // t('plugin__networking-console-plugin~label')).
+        Check that apiGroup, apiVersion, kind, and plural values are correct.
+    - path: "src/views/*/form/**"
+      instructions: |
+        Verify forms use react-hook-form for state management.
+        Check that all user-facing strings use useNetworkingTranslation() or Trans.
+        Ensure form validation messages are translatable.
+    - path: "src/utils/components/**"
+      instructions: |
+        These are shared UI components used across views. Changes here can
+        affect all networking resource pages. Verify backward compatibility.
+    - path: "**/*.scss"
+      instructions: |
+        No hex colors -- use PatternFly CSS variables.
+        No naked element selectors (table, div) or .pf-/.co- prefixed classes.
+        Class names should be prefixed to avoid console style collisions.
+    - path: "plugin-manifest.ts"
+      instructions: |
+        This is the root plugin manifest aggregating all view extensions.
+        Verify that new entries have matching manifest.ts files in their view directories.
+    - path: "src/utils/telemetry/**"
+      instructions: |
+        Telemetry events are sent to Segment. Verify event names follow
+        existing conventions and do not contain PII.

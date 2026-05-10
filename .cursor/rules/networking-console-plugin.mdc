@@ -1,0 +1,27 @@
+---
+description: Conventions and context for networking-console-plugin
+globs: "**/*.{ts,tsx,scss}"
+alwaysApply: true
+---
+
+# networking-console-plugin
+
+OpenShift Console dynamic plugin for the Networking section.
+
+## Context Files
+
+- [AGENTS.md](../../AGENTS.md) -- repo structure, key patterns, review checklist
+- [ARCHITECTURE.md](../../ARCHITECTURE.md) -- system design, data flow, dependencies
+- [CONTRIBUTING.md](../../CONTRIBUTING.md) -- coding standards, PR process, testing
+
+## Conventions
+
+- Path aliases: `@utils/` = `src/utils/`, `@views/` = `src/views/`, `@styles/` = `src/styles/`
+- Import order: React, packages, `@` aliases, relative, styles (`simple-import-sort`)
+- Named exports sorted alphabetically (`perfectionist`)
+- No `console.log`, no hex colors in SCSS, prefix CSS classes
+- i18n namespace: `plugin__networking-console-plugin`
+- Data fetching: `useK8sWatchResource` only (no direct API calls)
+- Resource URLs: use `getResourceURL()` or `resourcePathFromModel()`
+- Lint: `npm run lint` / `npm run lint-fix`
+- Test: `npm run test-cypress-headless` (Cypress E2E)
